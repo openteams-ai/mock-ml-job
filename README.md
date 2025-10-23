@@ -275,26 +275,30 @@ mock-ml-job/
 
 ### Continuous Integration
 
-The project uses GitHub Actions for comprehensive CI/CD:
+The project uses GitHub Actions with a 4-stage pipeline:
 
-**On every commit and PR:**
-1. **Unit Tests** - Tests on Python 3.9, 3.10, 3.11, 3.12
-   - Linting with ruff
-   - Type checking with mypy
-   - Unit tests with pytest and coverage reporting
+**Stage 1: Test** (runs on every commit and PR)
+- Linting with ruff
+- Type checking with mypy
+- Unit tests with pytest on Python 3.9, 3.10, 3.11, 3.12
+- Coverage reporting (100% required)
 
-2. **Integration Tests** - Docker container validation
-   - Builds Docker image
-   - Runs 8 integration tests validating container behavior
-   - Tests metrics generation, configuration, signal handling, etc.
+**Stage 2: Build** (after tests pass)
+- Builds Docker image (linux/amd64)
+- Saves image as artifact for next stage
 
-**On tagged releases (e.g., `v1.0.0`):**
-- Builds multi-architecture Docker image (linux/amd64, linux/arm64)
-- Pushes to GitHub Container Registry after all tests pass
+**Stage 3: Integration Test** (using built image)
+- Loads Docker image from previous stage
+- Runs 8 integration tests validating container behavior
+- Tests metrics generation, configuration, signal handling, etc.
+
+**Stage 4: Push** (only on tagged releases like `v1.0.0`)
+- Builds multi-architecture image (linux/amd64, linux/arm64)
+- Pushes to GitHub Container Registry
 - Supports both x86 and ARM64 (Apple Silicon M-series Macs)
-- Tags: `latest`, version-specific (`v1.0.0`, `v1.0`, `v1`)
+- Tags: `latest`, `v1.0.0`, `v1.0`, `v1`
 
-This ensures every commit is validated and every release supports multiple architectures.
+This pipeline ensures every commit is fully validated, and only tagged releases produce Docker images.
 
 See [CLAUDE.md](CLAUDE.md) for additional development guidance.
 
