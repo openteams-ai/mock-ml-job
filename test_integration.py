@@ -17,6 +17,40 @@ import pytest
 class TestDockerIntegration:
     """Integration tests for Docker container behavior."""
 
+    @staticmethod
+    def wait_for_metrics_file(metrics_file: Path, container_name: str, max_wait: int = 15) -> None:
+        """Wait for metrics file to be created, with debugging if it fails."""
+        for _ in range(max_wait):
+            if metrics_file.exists():
+                return
+            time.sleep(1)
+
+            # Check if container is still running
+            status_result = subprocess.run(
+                ["docker", "ps", "-q", "-f", f"name={container_name}"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            if not status_result.stdout.strip():
+                # Container stopped, get logs
+                logs_result = subprocess.run(
+                    ["docker", "logs", container_name],
+                    capture_output=True,
+                    text=True,
+                    check=True,
+                )
+                pytest.fail(f"Container stopped unexpectedly. Logs:\n{logs_result.stdout}\n{logs_result.stderr}")
+
+        # Timeout reached
+        logs_result = subprocess.run(
+            ["docker", "logs", container_name],
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        pytest.fail(f"Metrics file was not created after {max_wait}s. Container logs:\n{logs_result.stdout}")
+
     @pytest.fixture(scope="class")
     def docker_image_name(self) -> str:
         """Return the Docker image name for testing."""
@@ -94,7 +128,7 @@ class TestDockerIntegration:
 
         try:
             # Run container in background
-            subprocess.run(
+            result = subprocess.run(
                 [
                     "docker", "run", "-d", "--name", container_name,
                     "-e", "TOTAL_EPOCHS=1",
@@ -105,17 +139,14 @@ class TestDockerIntegration:
                 ],
                 capture_output=True,
                 text=True,
-                check=True,
+                check=False,
             )
 
-            # Wait for metrics file to be created
-            max_wait = 10
-            for _ in range(max_wait):
-                if metrics_file.exists():
-                    break
-                time.sleep(1)
+            if result.returncode != 0:
+                pytest.fail(f"Failed to start container: {result.stderr}")
 
-            assert metrics_file.exists(), "Metrics file was not created"
+            # Wait for metrics file to be created
+            self.wait_for_metrics_file(metrics_file, container_name)
 
             # Verify metrics file contains valid JSON
             with metrics_file.open() as f:
@@ -156,10 +187,8 @@ class TestDockerIntegration:
                 check=True,
             )
 
-            # Wait for metrics
-            time.sleep(3)
-
-            assert metrics_file.exists(), "Metrics file was not created"
+            # Wait for metrics file to be created
+            self.wait_for_metrics_file(metrics_file, container_name)
 
             with metrics_file.open() as f:
                 data: dict[str, Any] = json.load(f)
@@ -192,7 +221,8 @@ class TestDockerIntegration:
                 check=True,
             )
 
-            time.sleep(3)
+            # Wait for metrics file to be created
+            self.wait_for_metrics_file(metrics_file, container_name)
 
             with metrics_file.open() as f:
                 data: dict[str, Any] = json.load(f)
@@ -298,13 +328,17 @@ class TestDockerIntegration:
                 check=True,
             )
 
+            # Wait for initial metrics file
+            self.wait_for_metrics_file(metrics_file, container_name)
+
             # Read initial metrics
-            time.sleep(2)
             with metrics_file.open() as f:
                 data1: dict[str, Any] = json.load(f)
 
-            # Wait and read again
-            time.sleep(2)
+            # Wait for an update (at least 2 seconds for another write)
+            time.sleep(3)
+
+            # Read again
             with metrics_file.open() as f:
                 data2: dict[str, Any] = json.load(f)
 
