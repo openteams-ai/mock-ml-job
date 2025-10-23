@@ -171,10 +171,6 @@ docker run --rm \
   mock-ml-job
 ```
 
-## Development
-
-See [CLAUDE.md](CLAUDE.md) for development guidance.
-
 ## License
 
 [Add your license here]
