@@ -8,45 +8,48 @@ The sidecar will read these metrics and export them via OpenTelemetry.
 """
 
 import json
-import time
 import os
 import signal
 import sys
+import time
 from datetime import datetime, timezone
 from pathlib import Path
+from types import FrameType
+from typing import Any, Optional
+
 import numpy as np
 
 
 class TrainingSimulator:
     """Simulates an ML training job with realistic metrics."""
 
-    def __init__(self):
-        self.job_id = os.getenv("JOB_ID", "training-job-001")
-        self.model_name = os.getenv("MODEL_NAME", "resnet-50")
-        self.dataset = os.getenv("DATASET", "imagenet")
-        self.metrics_path = Path(os.getenv("METRICS_FILE_PATH", "/shared/metrics/current.json"))
-        self.write_interval = int(os.getenv("WRITE_INTERVAL", "10"))
-        self.total_epochs = int(os.getenv("TOTAL_EPOCHS", "10"))
-        self.batches_per_epoch = int(os.getenv("BATCHES_PER_EPOCH", "100"))
+    def __init__(self) -> None:
+        self.job_id: str = os.getenv("JOB_ID", "training-job-001")
+        self.model_name: str = os.getenv("MODEL_NAME", "resnet-50")
+        self.dataset: str = os.getenv("DATASET", "imagenet")
+        self.metrics_path: Path = Path(os.getenv("METRICS_FILE_PATH", "/shared/metrics/current.json"))
+        self.write_interval: int = int(os.getenv("WRITE_INTERVAL", "10"))
+        self.total_epochs: int = int(os.getenv("TOTAL_EPOCHS", "10"))
+        self.batches_per_epoch: int = int(os.getenv("BATCHES_PER_EPOCH", "100"))
 
-        self.start_time = datetime.now(timezone.utc)
-        self.current_epoch = 1
-        self.current_batch = 0
-        self.running = True
+        self.start_time: datetime = datetime.now(timezone.utc)
+        self.current_epoch: int = 1
+        self.current_batch: int = 0
+        self.running: bool = True
 
         # Training progression parameters
-        self.initial_loss = 2.5
-        self.target_loss = 0.15
-        self.initial_val_loss = 2.8
-        self.target_val_loss = 0.25
-        self.initial_accuracy = 0.15
-        self.target_accuracy = 0.94
-        self.base_lr = 0.001
+        self.initial_loss: float = 2.5
+        self.target_loss: float = 0.15
+        self.initial_val_loss: float = 2.8
+        self.target_val_loss: float = 0.25
+        self.initial_accuracy: float = 0.15
+        self.target_accuracy: float = 0.94
+        self.base_lr: float = 0.001
 
         # Ensure metrics directory exists
         self.metrics_path.parent.mkdir(parents=True, exist_ok=True)
 
-        print(f"Training Simulator initialized:")
+        print("Training Simulator initialized:")
         print(f"  Job ID: {self.job_id}")
         print(f"  Model: {self.model_name}")
         print(f"  Dataset: {self.dataset}")
@@ -55,12 +58,12 @@ class TrainingSimulator:
         print(f"  Total epochs: {self.total_epochs}")
         print(f"  Batches per epoch: {self.batches_per_epoch}")
 
-    def signal_handler(self, signum, frame):
+    def signal_handler(self, signum: int, _frame: Optional[FrameType]) -> None:
         """Handle shutdown signals gracefully."""
         print(f"\nReceived signal {signum}, shutting down gracefully...")
         self.running = False
 
-    def calculate_metrics(self):
+    def calculate_metrics(self) -> dict[str, Any]:
         """Calculate realistic training metrics with progression and noise."""
         total_batches = self.total_epochs * self.batches_per_epoch
         progress = (self.current_epoch - 1) * self.batches_per_epoch + self.current_batch
@@ -108,7 +111,7 @@ class TrainingSimulator:
             "samples_per_second": round(samples_per_second, 2)
         }
 
-    def write_metrics(self):
+    def write_metrics(self) -> None:
         """Write current metrics to shared file."""
         metrics = self.calculate_metrics()
 
@@ -130,7 +133,7 @@ class TrainingSimulator:
         # Write atomically by writing to temp file then renaming
         temp_path = self.metrics_path.with_suffix('.tmp')
         try:
-            with open(temp_path, 'w') as f:
+            with temp_path.open('w') as f:
                 json.dump(data, f, indent=2)
             temp_path.replace(self.metrics_path)
 
@@ -143,7 +146,7 @@ class TrainingSimulator:
         except Exception as e:
             print(f"Error writing metrics: {e}", file=sys.stderr)
 
-    def advance_training(self):
+    def advance_training(self) -> None:
         """Advance to next batch/epoch."""
         self.current_batch += 1
 
@@ -153,11 +156,11 @@ class TrainingSimulator:
             print(f"\n--- Completed Epoch {self.current_epoch - 1} ---\n")
 
         if self.current_epoch > self.total_epochs:
-            print(f"\n=== Training Complete! ===")
+            print("\n=== Training Complete! ===")
             print(f"Total time: {datetime.now(timezone.utc) - self.start_time}")
             self.running = False
 
-    def run(self):
+    def run(self) -> None:
         """Main training loop."""
         # Set up signal handlers
         signal.signal(signal.SIGTERM, self.signal_handler)

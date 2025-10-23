@@ -171,6 +171,86 @@ docker run --rm \
   mock-ml-job
 ```
 
+## Development
+
+### Setup Development Environment
+
+```bash
+# Create and activate virtual environment
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install development dependencies
+pip install -r requirements-dev.txt
+```
+
+### Running Tests
+
+```bash
+# Run all tests with coverage
+pytest
+
+# Run tests with verbose output
+pytest -v
+
+# Run specific test file
+pytest test_training_simulator.py
+
+# Run specific test
+pytest test_training_simulator.py::TestTrainingSimulator::test_calculate_metrics_structure
+
+# Generate coverage report
+pytest --cov=training_simulator --cov-report=html
+# Open htmlcov/index.html in browser
+```
+
+### Code Quality
+
+```bash
+# Run linting
+ruff check .
+
+# Auto-fix linting issues
+ruff check --fix .
+
+# Run type checking
+mypy training_simulator.py test_training_simulator.py
+
+# Run all checks (like CI does)
+ruff check . && mypy training_simulator.py test_training_simulator.py && pytest
+```
+
+### Project Structure
+
+```
+mock-ml-job/
+├── training_simulator.py      # Main simulator code
+├── test_training_simulator.py # Comprehensive unit tests
+├── requirements.txt            # Runtime dependencies
+├── requirements-dev.txt        # Development dependencies
+├── pyproject.toml             # Tool configuration (pytest, mypy, ruff)
+├── Dockerfile                 # Container definition
+└── .github/workflows/
+    ├── ci.yml                 # Test, lint, type-check on every commit
+    └── release.yml            # Build and push Docker image on tags
+```
+
+### Continuous Integration
+
+The project uses GitHub Actions for CI/CD:
+
+- **CI Workflow** (`ci.yml`): Runs on every push and PR
+  - Tests on Python 3.9, 3.10, 3.11, 3.12
+  - Linting with ruff
+  - Type checking with mypy
+  - Tests with pytest and coverage reporting
+
+- **Release Workflow** (`release.yml`): Runs on version tags
+  - Builds Docker image
+  - Pushes to GitHub Container Registry
+
+See [CLAUDE.md](CLAUDE.md) for additional development guidance.
+
 ## License
 
-[Add your license here]
+Apache License 2.0 - See [LICENSE](LICENSE) file for details.
