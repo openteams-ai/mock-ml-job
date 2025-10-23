@@ -182,27 +182,65 @@ source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 # Install development dependencies
 pip install -r requirements-dev.txt
+# Or use make
+make install-dev
+```
+
+### Using Make
+
+The project includes a Makefile for common development tasks:
+
+```bash
+# Show all available commands
+make help
+
+# Run all quality checks (as CI does)
+make ci
+
+# Individual commands
+make lint              # Run linting
+make typecheck         # Run type checking
+make test-unit         # Run unit tests
+make docker-build      # Build Docker image
+make test-integration  # Run integration tests
+make clean             # Remove generated files
 ```
 
 ### Running Tests
 
+#### Unit Tests
+
 ```bash
-# Run all tests with coverage
-pytest
+# Run unit tests with coverage
+pytest test_training_simulator.py
 
 # Run tests with verbose output
-pytest -v
-
-# Run specific test file
-pytest test_training_simulator.py
+pytest test_training_simulator.py -v
 
 # Run specific test
 pytest test_training_simulator.py::TestTrainingSimulator::test_calculate_metrics_structure
 
 # Generate coverage report
-pytest --cov=training_simulator --cov-report=html
+pytest test_training_simulator.py --cov=training_simulator --cov-report=html
 # Open htmlcov/index.html in browser
 ```
+
+#### Integration Tests
+
+Integration tests build and run the actual Docker container to verify it behaves correctly:
+
+```bash
+# Build the Docker image first
+docker build -t mock-ml-job:test .
+
+# Run integration tests (requires Docker)
+pytest test_integration.py -v
+
+# Run all tests (unit + integration)
+pytest -v
+```
+
+**Note**: Integration tests require Docker to be installed and running.
 
 ### Code Quality
 
@@ -225,29 +263,38 @@ ruff check . && mypy training_simulator.py test_training_simulator.py && pytest
 ```
 mock-ml-job/
 ├── training_simulator.py      # Main simulator code
-├── test_training_simulator.py # Comprehensive unit tests
+├── test_training_simulator.py # Unit tests (100% coverage)
+├── test_integration.py        # Integration tests (Docker container)
 ├── requirements.txt            # Runtime dependencies
 ├── requirements-dev.txt        # Development dependencies
 ├── pyproject.toml             # Tool configuration (pytest, mypy, ruff)
 ├── Dockerfile                 # Container definition
 └── .github/workflows/
-    ├── ci.yml                 # Test, lint, type-check on every commit
-    └── release.yml            # Build and push Docker image on tags
+    └── ci.yml                 # CI/CD: tests, linting, type-checking, Docker build & push
 ```
 
 ### Continuous Integration
 
-The project uses GitHub Actions for CI/CD:
+The project uses GitHub Actions for comprehensive CI/CD:
 
-- **CI Workflow** (`ci.yml`): Runs on every push and PR
-  - Tests on Python 3.9, 3.10, 3.11, 3.12
-  - Linting with ruff
-  - Type checking with mypy
-  - Tests with pytest and coverage reporting
+**On every commit and PR:**
+1. **Unit Tests** - Tests on Python 3.9, 3.10, 3.11, 3.12
+   - Linting with ruff
+   - Type checking with mypy
+   - Unit tests with pytest and coverage reporting
 
-- **Release Workflow** (`release.yml`): Runs on version tags
-  - Builds Docker image
-  - Pushes to GitHub Container Registry
+2. **Integration Tests** - Docker container validation
+   - Builds Docker image
+   - Runs 8 integration tests validating container behavior
+   - Tests metrics generation, configuration, signal handling, etc.
+
+**On tagged releases (e.g., `v1.0.0`):**
+- Builds multi-architecture Docker image (linux/amd64, linux/arm64)
+- Pushes to GitHub Container Registry after all tests pass
+- Supports both x86 and ARM64 (Apple Silicon M-series Macs)
+- Tags: `latest`, version-specific (`v1.0.0`, `v1.0`, `v1`)
+
+This ensures every commit is validated and every release supports multiple architectures.
 
 See [CLAUDE.md](CLAUDE.md) for additional development guidance.
 

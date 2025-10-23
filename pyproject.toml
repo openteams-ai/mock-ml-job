@@ -31,6 +31,9 @@ addopts = [
 source = ["."]
 omit = ["test_*.py", ".venv/*", "venv/*"]
 
+[tool.coverage.paths]
+source = ["."]
+
 [tool.coverage.report]
 exclude_lines = [
     "pragma: no cover",
