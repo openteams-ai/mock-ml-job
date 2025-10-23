@@ -77,6 +77,8 @@ class TestDockerIntegration:
         """Create a temporary directory for metrics volume mount."""
         metrics_dir = tmp_path / "metrics"
         metrics_dir.mkdir()
+        # Set permissions to 777 so container user (uid 1000) can write
+        metrics_dir.chmod(0o777)
         return metrics_dir
 
     def test_docker_image_builds_successfully(self, build_docker_image: str) -> None:
